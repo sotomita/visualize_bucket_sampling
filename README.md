@@ -5,7 +5,7 @@
 <p align="center">
 <img src="./sample/fig.png" alt="fig" />
 </p>
-(左図)散布図: 観測されたSST、等値線、陰影: 補間されたSST (右図)散布図: 観測されたSST、等値線:補間されたSST、陰影:保管されたSSTの勾配の絶対値  
+(左図)散布図: 観測されたSST、等値線、陰影: 補間されたSST (右図)散布図: 観測されたSST、等値線:補間されたSST、陰影:補間されたSSTの勾配の絶対値  
 
 ## Dependencies
 - numpy
@@ -21,7 +21,7 @@
 - 観測点名
 - 経度
 - 緯度
-- 海面水温
+- 海面水温  
 をまとめたCSVファイルを作成する。 
 
 (例)
@@ -51,5 +51,5 @@ grad_delta = 0.125
 ```
 ### 2. run ```plot_sst_interp_grad.py```
 
-## Auther
+## Author
 Sou Tomita  

@@ -18,19 +18,43 @@ def get_interp_sst(sample_lon, sample_lat, sample_sst, lon2d, lat2d) -> np.ndarr
     return sst2d
 
 
+def get_grad_sst(lon2d, lat2d, sst2d):
+    dx, dy = mpcalc.lat_lon_grid_deltas(lon2d, lat2d)
+    grad_y, grad_x = mpcalc.gradient(sst2d, deltas=(dy, dx))
+
+    grad = np.sqrt(grad_x**2 + grad_y**2)
+
+    return grad
+
+
 if __name__ == "__main__":
-    print("util.py")
+    import namelist
 
-    plot_area = [142, 145, 37, 42]
+    print("plot_sst_interp_grad.py")
 
-    lon = np.arange(141, 146, 0.05)
-    lat = np.arange(36, 43, 0.05)
-    lon2d, lat2d = np.meshgrid(lon, lat)
+    # read namelist
+    plot_area = namelist.plot_area
+    sst_min = namelist.grad_min
+    sst_max = namelist.sst_max
+    sst_delta = namelist.sst_delta
+    grad_min = namelist.grad_min
+    grad_max = namelist.grad_max
+    grad_delta = namelist.grad_delta
+    lon2d = namelist.lon2d
+    lat2d = namelist.lat2d
 
+    # read obs
     df = pd.read_csv("./sample/obs.csv", index_col=0)
 
+    # interpolate SST
     sst2d = get_interp_sst(df["Lon"], df["Lat"], df["SST"], lon2d, lat2d)
 
+    # calc norm of grad of SST
+    sst_grad = get_grad_sst(
+        lon2d * units("deg"), lat2d * units("deg"), sst2d * units("degC")
+    )
+
+    # plot
     fig = plt.figure()
     ax1 = fig.add_subplot(
         1,
@@ -48,6 +72,8 @@ if __name__ == "__main__":
     gl = ax1.gridlines(
         crs=ccrs.PlateCarree(), color="gray", linestyle="--", draw_labels=True
     )
+    gl.top_labels = False
+    gl.right_labels = False
 
     ax1.add_feature(cfeature.COASTLINE, linewidth=0.8)
 
@@ -56,8 +82,8 @@ if __name__ == "__main__":
         lat2d,
         sst2d,
         cmap="turbo",
-        vmin=5,
-        vmax=16,
+        vmin=sst_min,
+        vmax=sst_max,
         transform=ccrs.PlateCarree(),
     )
     sc = ax1.scatter(
@@ -65,10 +91,10 @@ if __name__ == "__main__":
         df["Lat"],
         c=df["SST"],
         cmap="turbo",
-        vmin=5,
-        vmax=16,
+        vmin=sst_min,
+        vmax=sst_max,
         edgecolors="black",
-        linewidths=0.5,
+        linewidths=0.75,
         transform=ccrs.PlateCarree(),
     )
     cbar = fig.colorbar(
@@ -78,6 +104,18 @@ if __name__ == "__main__":
         location="left",
     )
     cbar.set_label("SST [degC]")
+    cbar.ax.set_position([0.075, 0.2, 0.02, 0.5])
+
+    c = ax1.contour(
+        lon2d,
+        lat2d,
+        sst2d,
+        colors="black",
+        linewidths=0.75,
+        transform=ccrs.PlateCarree(),
+        levels=np.arange(sst_min, sst_max + sst_delta, sst_delta),
+    )
+    plt.clabel(c, fontsize=7)
 
     ax2 = fig.add_subplot(
         1,
@@ -94,16 +132,52 @@ if __name__ == "__main__":
     gl = ax2.gridlines(
         crs=ccrs.PlateCarree(), color="gray", linestyle="--", draw_labels=True
     )
+    gl.top_labels = False
+    gl.left_labels = False
+    gl.right_labels = False
 
     ax2.add_feature(cfeature.COASTLINE, linewidth=0.8)
+
+    cf = ax2.contourf(
+        lon2d,
+        lat2d,
+        sst_grad * 1e4,
+        cmap="binary",
+        extend="max",
+        levels=np.arange(grad_min, grad_max + grad_delta, grad_delta),
+        transform=ccrs.PlateCarree(),
+    )
+    cbar = fig.colorbar(
+        cf,
+        ax=ax2,
+        orientation="vertical",
+        location="right",
+    )
+    cbar.set_label("|grad(SST)| [degC/10km]")
+    cbar.ax.set_position([0.875, 0.2, 0.02, 0.5])
 
     c = ax2.contour(
         lon2d,
         lat2d,
         sst2d,
         colors="black",
+        linewidths=0.75,
+        transform=ccrs.PlateCarree(),
+        levels=np.arange(sst_min, sst_max + sst_delta, sst_delta),
+    )
+    plt.clabel(c, fontsize=7)
+
+    sc = ax2.scatter(
+        df["Lon"],
+        df["Lat"],
+        c=df["SST"],
+        cmap="turbo",
+        vmin=sst_min,
+        vmax=sst_max,
+        edgecolors="black",
+        linewidths=0.5,
         transform=ccrs.PlateCarree(),
     )
 
-    plt.tight_layout()
-    plt.savefig("./sample/fig.png")
+    # plt.tight_layout()
+    plt.savefig("./fig.png")

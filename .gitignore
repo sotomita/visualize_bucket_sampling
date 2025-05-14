@@ -173,7 +173,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-*png
+png
 *nc
 sample_loc.csv
 getsst.py
